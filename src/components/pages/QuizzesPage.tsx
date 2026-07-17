@@ -1,0 +1,326 @@
+import React, { useState, useEffect } from 'react';
+import { Card } from '../UI/Card';
+import { Button } from '../UI/Button';
+import { Progress } from '../UI/Progress';
+import { showToast } from '../UI/Toast';
+import { 
+  Trophy, 
+  Clock, 
+  HelpCircle, 
+  HelpCircle as QuestionIcon,
+  ChevronRight, 
+  CheckCircle, 
+  XCircle, 
+  Award, 
+  Sparkles, 
+  RefreshCw,
+  Search,
+  Timer
+} from 'lucide-react';
+
+export const QuizzesPage: React.FC = () => {
+  const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [quizFinished, setQuizFinished] = useState(false);
+  const [score, setScore] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(120);
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  const quizzes = [
+    {
+      id: "rust-mutex",
+      title: "Rust Mutexes & Thread Safety",
+      topic: "Rust Backend",
+      questionsCount: 3,
+      difficulty: "Advanced",
+      questions: [
+        {
+          question: "Which Rust structure guarantees thread boundary synchronization by granting exclusive read/write lockers?",
+          options: ["Mutex", "Rc", "RefCell", "Cell"],
+          correct: 0,
+          explanation: "Mutex (Mutual Exclusion) forces single-thread write/read scopes. Rc and RefCell are non-thread-safe reference counters."
+        },
+        {
+          question: "What happens when a thread calls lock() on a Mutex that it has already locked in the same thread?",
+          options: ["It deadlocks", "It returns an error", "It overwrites the lock", "It drops the previous scope"],
+          correct: 0,
+          explanation: "Standard Rust Mutexes do not support reentrancy. Re-locking within the same scope results in a deadlock."
+        },
+        {
+          question: "Which trait must the inner data of a Mutex satisfy to safely send mutex locks across thread barriers?",
+          options: ["Send", "Sync", "Clone", "Copy"],
+          correct: 0,
+          explanation: "For Mutex<T> to be Sync, T must be Send. Send lets ownership pass to concurrent execution workers."
+        }
+      ]
+    },
+    {
+      id: "react-memo",
+      title: "React Memoization & Compilers",
+      topic: "React Compiler",
+      questionsCount: 2,
+      difficulty: "Intermediate",
+      questions: [
+        {
+          question: "Which Hook caches calculated results across component re-renders?",
+          options: ["useEffect", "useMemo", "useCallback", "useRef"],
+          correct: 1,
+          explanation: "useMemo stores calculated results. useCallback caches function instances. useRef tracks references."
+        }
+      ]
+    }
+  ];
+
+  const activeQuiz = quizzes.find(q => q.id === activeQuizId);
+
+  // Timer Effect
+  useEffect(() => {
+    if (activeQuizId && !quizFinished && timerSeconds > 0) {
+      const interval = setInterval(() => {
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            setQuizFinished(true);
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [activeQuizId, quizFinished, timerSeconds]);
+
+  const handleSelectOption = (optIdx: number) => {
+    if (selectedAnswer !== null) return; // Prevent double select
+    setSelectedAnswer(optIdx);
+    setShowExplanation(true);
+    
+    if (activeQuiz && optIdx === activeQuiz.questions[currentQuestionIdx].correct) {
+      setScore(prev => prev + 1);
+      showToast('Correct answer!', 'success');
+    } else {
+      showToast('Incorrect answer.', 'danger');
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (!activeQuiz) return;
+    setSelectedAnswer(null);
+    setShowExplanation(false);
+    
+    if (currentQuestionIdx < activeQuiz.questions.length - 1) {
+      setCurrentQuestionIdx(prev => prev + 1);
+    } else {
+      setQuizFinished(true);
+      showToast('Quiz complete!', 'success');
+    }
+  };
+
+  const handleRetake = () => {
+    setCurrentQuestionIdx(0);
+    setSelectedAnswer(null);
+    setQuizFinished(false);
+    setScore(0);
+    setTimerSeconds(120);
+    setShowExplanation(false);
+  };
+
+  const handleStartQuiz = (id: string) => {
+    setActiveQuizId(id);
+    setCurrentQuestionIdx(0);
+    setSelectedAnswer(null);
+    setQuizFinished(false);
+    setScore(0);
+    setTimerSeconds(120);
+    setShowExplanation(false);
+  };
+
+  return (
+    <div className="space-y-6 text-left">
+      
+      {!activeQuizId ? (
+        /* Quizzes Dashboard */
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
+            <div>
+              <h2 className="text-2xl font-bold font-outfit text-white">Quiz Center</h2>
+              <p className="text-sm text-zinc-400 font-light mt-1">Practice conceptual MCQ checkpoints generated by the Quiz Agent.</p>
+            </div>
+          </div>
+
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4" hoverEffect>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase">Completed</div>
+              <div className="text-2xl font-bold text-white mt-1">12 Quizzes</div>
+            </Card>
+            <Card className="p-4" hoverEffect>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase">Average Score</div>
+              <div className="text-2xl font-bold text-white mt-1">84%</div>
+            </Card>
+            <Card className="p-4" hoverEffect>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase">Leaderboard rank</div>
+              <div className="text-2xl font-bold text-white mt-1">#42</div>
+            </Card>
+            <Card className="p-4" hoverEffect>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase">Daily Streak</div>
+              <div className="text-2xl font-bold text-white mt-1">8 Days</div>
+            </Card>
+          </div>
+
+          {/* Available Quizzes Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {quizzes.map((q) => (
+              <Card key={q.id} className="p-6 flex flex-col justify-between h-48" hoverEffect>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase">
+                    <span>{q.topic}</span>
+                    <span>{q.difficulty}</span>
+                  </div>
+                  <h3 className="font-bold text-white text-base leading-snug">{q.title}</h3>
+                  <p className="text-xs text-zinc-400 font-light">{q.questionsCount} multiple choice questions.</p>
+                </div>
+
+                <div className="border-t border-white/5 pt-4 flex justify-between items-center">
+                  <span className="text-xs text-zinc-500 font-mono flex items-center gap-1">
+                    <Clock size={12} /> 2 mins limit
+                  </span>
+                  <Button variant="primary" size="sm" onClick={() => handleStartQuiz(q.id)} className="text-xs">
+                    Start Test <ChevronRight size={12} />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      ) : (
+        /* Interactive Quiz Arena */
+        activeQuiz && (
+          <div className="max-w-3xl mx-auto space-y-6">
+            
+            {/* Quiz header info */}
+            <div className="flex justify-between items-center border-b border-white/5 pb-4">
+              <div>
+                <h3 className="font-bold text-white text-lg">{activeQuiz.title}</h3>
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">{activeQuiz.topic}</span>
+              </div>
+              
+              <div className="flex items-center gap-4 text-xs font-mono text-zinc-400 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+                <span className="flex items-center gap-1"><Timer size={14} /> {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}</span>
+                <span>•</span>
+                <span>Question {currentQuestionIdx + 1}/{activeQuiz.questions.length}</span>
+              </div>
+            </div>
+
+            {!quizFinished ? (
+              /* Question panel */
+              <Card className="p-6 md:p-8 space-y-6" hoverEffect={false}>
+                <div className="space-y-3">
+                  <span className="text-[10px] uppercase font-bold text-zinc-500 flex items-center gap-1">
+                    <HelpCircle size={12} /> Single Choice Option
+                  </span>
+                  <h4 className="text-base md:text-lg font-bold text-white leading-relaxed">
+                    {activeQuiz.questions[currentQuestionIdx].question}
+                  </h4>
+                </div>
+
+                {/* Options List */}
+                <div className="space-y-3">
+                  {activeQuiz.questions[currentQuestionIdx].options.map((opt, oIdx) => {
+                    const isSelected = selectedAnswer === oIdx;
+                    const isCorrect = oIdx === activeQuiz.questions[currentQuestionIdx].correct;
+                    
+                    let btnStyle = "border-white/5 bg-transparent text-zinc-300 hover:bg-white/3";
+                    let prefixIcon = null;
+
+                    if (selectedAnswer !== null) {
+                      if (isCorrect) {
+                        btnStyle = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold";
+                        prefixIcon = <CheckCircle size={15} />;
+                      } else if (isSelected) {
+                        btnStyle = "bg-rose-500/10 border-rose-500/30 text-rose-400 font-bold";
+                        prefixIcon = <XCircle size={15} />;
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={oIdx}
+                        onClick={() => handleSelectOption(oIdx)}
+                        disabled={selectedAnswer !== null}
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-xs text-left transition-all ${btnStyle}`}
+                      >
+                        {prefixIcon}
+                        <span>{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* AI Explanation Pane */}
+                {showExplanation && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2.5">
+                    <div className="flex items-center gap-1.5 text-xs text-white font-bold">
+                      <Sparkles size={13} className="text-white" />
+                      <span>Quiz Agent Explanation:</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
+                      {activeQuiz.questions[currentQuestionIdx].explanation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Navigation Action */}
+                {selectedAnswer !== null && (
+                  <div className="flex justify-end pt-4">
+                    <Button variant="primary" size="sm" onClick={handleNextQuestion} className="text-xs">
+                      {currentQuestionIdx < activeQuiz.questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            ) : (
+              /* Finish Screen */
+              <Card className="p-10 text-center space-y-6" hoverEffect={false}>
+                <div className="flex justify-center">
+                  <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white shadow-neon">
+                    <Award size={36} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xl font-bold font-outfit text-white">Quiz Summary</h4>
+                  <p className="text-xs text-zinc-400">Review your conceptual evaluation score</p>
+                </div>
+
+                <div className="max-w-xs mx-auto grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                  <div>
+                    <div className="text-2xl font-bold text-white">{score}/{activeQuiz.questions.length}</div>
+                    <div className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Accuracy</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white">{Math.round((score / activeQuiz.questions.length) * 100)}%</div>
+                    <div className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Final Score</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center gap-3 pt-6">
+                  <Button variant="glass" size="sm" onClick={() => setActiveQuizId(null)} className="text-xs">
+                    Return to Center
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={handleRetake} className="text-xs flex items-center gap-1">
+                    <RefreshCw size={12} /> Retake Quiz
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+          </div>
+        )
+      )}
+
+    </div>
+  );
+};
+export default QuizzesPage;
